@@ -14,9 +14,19 @@ try {
         $headers = apache_request_headers();
         $ah = array_key_exists('Authorization', $headers) ? $headers['Authorization'] : NULL;
         $rs->verifyAuthorizationHeader($ah);
-        $output = json_encode(array("authorized" => TRUE, "resource_owner_id" => $rs->getResourceOwnerId(), "resource_owner_entitlement" => $rs->getEntitlement()));    
+        $data = array(
+            "authorized" => TRUE, 
+            "id" => $rs->getResourceOwnerId(), 
+            "entitlement" => $rs->getEntitlement(),
+            "resource_owner_scope" => $rs->getScope(),
+        );
+        $output = json_encode($data);  
     } else {
-        $output = json_encode(array("authorized" => FALSE, "message" => "Hello World!"));
+        $data = array(
+            "authorized" => FALSE, 
+            "message" => "Hello World!",
+        );
+        $output = json_encode($data);
     }
     echo $output;
 

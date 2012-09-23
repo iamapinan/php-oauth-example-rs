@@ -118,6 +118,13 @@ class RemoteResourceServer {
         return $this->_resourceOwnerId;
     }
 
+    public function getScope() {
+        if(NULL === $this->_grantedScope) {
+            return array();
+        }
+        return explode(" ", $this->_grantedScope);
+    }
+
     public function getEntitlement() {
         if(NULL === $this->_grantedEntitlement) {
             return array();

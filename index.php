@@ -1,24 +1,35 @@
 <?php
 
-require_once "RemoteResourceServer.php";
+require_once "lib/RemoteResourceServer.php";
 
-$tokenEndpoint = 'http://localhost/php-oauth/token.php';
+$output = NULL;
 
-header("Content-Type: application/json");
+try {
 
-if(array_key_exists("protected", $_GET) && $_GET['protected'] === "1") {
-    // restricted call, needs authorization
-    try {
-        $rs = new RemoteResourceServer($tokenEndpoint);
+    $config = parse_ini_file("config/rs.ini");
+
+    if(array_key_exists("protected", $_GET) && $_GET['protected'] === "1") {
+        $rs = new RemoteResourceServer($config);
+
         $headers = apache_request_headers();
         $ah = array_key_exists('Authorization', $headers) ? $headers['Authorization'] : NULL;
-        $token = $rs->verify($ah);
-        echo json_encode(array("authorized" => TRUE, "resource_owner_id" => $token['resource_owner_id']));    
-    } catch (VerifyException $ve) {
-        echo json_encode(array("error" => $ve->getMessage(), "error_description" => $ve->getDescription()));
+        $rs->verifyAuthorizationHeader($ah);
+        $output = json_encode(array("authorized" => TRUE, "resource_owner_id" => $rs->getResourceOwnerId(), "resource_owner_entitlement" => $rs->getEntitlement()));    
+    } else {
+        $output = json_encode(array("authorized" => FALSE, "message" => "Hello World!"));
     }
-} else {
-    // unrestricted call
-    echo json_encode(array("authorized" => FALSE, "message" => "Hello World!"));
-}  
-?>
+    echo $output;
+
+    // FIXME: we should move this stuff to the class so App does not have to deal with this!
+} catch (ResourceServerException $e) {
+    header("HTTP/1.1 " . $e->getResponseCode());    // FIXME: status thingy, not just code! 
+    if("no_token" === $e->getMessage()) {
+        // no authorization header is a special case, the client did not know
+        // authentication was required, so tell it now without giving error message
+        $hdr = 'Bearer realm="Resource Server"'; 
+    } else {
+        $hdr = sprintf('Bearer realm="Resource Server",error="%s",error_description="%s"', $e->getMessage(), $e->getDescription());
+    }
+    header("WWW-Authenticate: $hdr");
+    echo json_encode(array("error" => $e->getMessage(), "error_description" => $e->getDescription()));
+}

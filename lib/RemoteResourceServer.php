@@ -44,9 +44,9 @@ class RemoteResourceServer {
     private $_config;
 
     private $_entitlementEnforcement;
-    private $_grantedEntitlement;
     private $_grantedScope;
     private $_resourceOwnerId;
+    private $_resourceOwnerAttributes;
 
     public function __construct(array $c) {
         $this->_config = $c;
@@ -54,7 +54,7 @@ class RemoteResourceServer {
         $this->_entitlementEnforcement = TRUE;
         $this->_resourceOwnerId = NULL;
         $this->_grantedScope = NULL;
-        $this->_grantedEntitlement = NULL;
+        $this->_resourceOwnerAttributes = NULL;
     }
 
     public function verifyAuthorizationHeader($authorizationHeader) {
@@ -106,7 +106,7 @@ class RemoteResourceServer {
 
         $this->_resourceOwnerId = $token['resource_owner_id'];
         $this->_grantedScope = $token['scope'];
-        $this->_grantedEntitlement = $token['resource_owner_entitlement'];
+        $this->_resourceOwnerAttributes = $token['resource_owner_attributes'];
     }
 
     public function setEntitlementEnforcement($enforce = TRUE) {
@@ -126,10 +126,10 @@ class RemoteResourceServer {
     }
 
     public function getEntitlement() {
-        if(NULL === $this->_grantedEntitlement) {
+        if(!array_key_exists("entitlement", $this->_resourceOwnerAttributes)) {
             return array();
         }
-        return explode(" ", $this->_grantedEntitlement);
+        return $this->_resourceOwnerAttributes['entitlement'];
     }
 
     public function hasScope($scope) {
@@ -150,14 +150,10 @@ class RemoteResourceServer {
     }
 
     public function hasEntitlement($entitlement) {
-        if(NULL === $this->_grantedEntitlement) {
+        if(!array_key_exists("entitlement", $this->_resourceOwnerAttributes)) {
             return FALSE;
         }
-        $grantedEntitlement = explode(" ", $this->_grantedEntitlement);
-        if(in_array($entitlement, $grantedEntitlement)) {
-            return TRUE;
-        }
-        return FALSE;
+        return in_array($entitlement, $this->_resourceOwnerAttributes['entitlement']);
     }
 
     public function requireEntitlement($entitlement) {
@@ -166,6 +162,10 @@ class RemoteResourceServer {
                 throw new ResourceServerException("insufficient_entitlement", "no permission for this call with granted entitlement");
             }
         }
+    }
+
+    public function getAttributes() {
+        return $this->_resourceOwnerAttributes;
     }
 
     private function _getRequiredConfigParameter($key) {

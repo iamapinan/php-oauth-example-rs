@@ -1,7 +1,7 @@
 <?php
 
-class RemoteResourceServer {
-
+class RemoteResourceServer
+{
     private $_config;
 
     private $_entitlementEnforcement;
@@ -9,7 +9,8 @@ class RemoteResourceServer {
     private $_resourceOwnerId;
     private $_resourceOwnerAttributes;
 
-    public function __construct(array $c) {
+    public function __construct(array $c)
+    {
         $this->_config = $c;
 
         $this->_entitlementEnforcement = TRUE;
@@ -18,14 +19,15 @@ class RemoteResourceServer {
         $this->_resourceOwnerAttributes = NULL;
     }
 
-    public function verifyAuthorizationHeader($authorizationHeader) {
-        if(NULL === $authorizationHeader) {
+    public function verifyAuthorizationHeader($authorizationHeader)
+    {
+        if (NULL === $authorizationHeader) {
             $this->_handleException("no_token", "no authorization header in the request");
         }
         // b64token = 1*( ALPHA / DIGIT / "-" / "." / "_" / "~" / "+" / "/" ) *"="
         $b64TokenRegExp = '(?:[[:alpha:][:digit:]-._~+/]+=*)';
         $result = preg_match('|^Bearer (?P<value>' . $b64TokenRegExp . ')$|', $authorizationHeader, $matches);
-        if($result === FALSE || $result === 0) {
+        if ($result === FALSE || $result === 0) {
             $this->_handleException("invalid_token", "the access token is malformed");
         }
         $accessToken = $matches['value'];
@@ -52,16 +54,16 @@ class RemoteResourceServer {
         $httpCode = curl_getinfo($curlChannel, CURLINFO_HTTP_CODE);
         curl_close($curlChannel);
 
-        if(200 !== $httpCode) {
+        if (200 !== $httpCode) {
             $this->_handleException("invalid_token", "the access token is not valid");
         }
 
         $token = json_decode($output, TRUE);
-        if(NULL === $token) {
+        if (NULL === $token) {
             $this->_handleException("XXX", "unable to decode the token response");
         }
 
-        if(time() > $token['issue_time'] + $token['expires_in']) {
+        if (time() > $token['issue_time'] + $token['expires_in']) {
             $this->_handleException("invalid_token", "the access token expired");
         }
 
@@ -70,80 +72,98 @@ class RemoteResourceServer {
         $this->_resourceOwnerAttributes = $token['resource_owner_attributes'];
     }
 
-    public function setEntitlementEnforcement($enforce = TRUE) {
+    public function setEntitlementEnforcement($enforce = TRUE)
+    {
         $this->_entitlementEnforcement = $enforce;
     }
 
-    public function getResourceOwnerId() {
+    public function getResourceOwnerId()
+    {
         // FIXME: should we die when the resourceOwnerId is NULL?
         return $this->_resourceOwnerId;
     }
 
-    public function getScope() {
-        if(NULL === $this->_grantedScope) {
+    public function getScope()
+    {
+        if (NULL === $this->_grantedScope) {
             return array();
         }
+
         return explode(" ", $this->_grantedScope);
     }
 
-    public function getEntitlement() {
-        if(!array_key_exists("entitlement", $this->_resourceOwnerAttributes)) {
+    public function getEntitlement()
+    {
+        if (!array_key_exists("entitlement", $this->_resourceOwnerAttributes)) {
             return array();
         }
+
         return $this->_resourceOwnerAttributes['entitlement'];
     }
 
-    public function hasScope($scope) {
-        if(NULL === $this->_grantedScope) {
+    public function hasScope($scope)
+    {
+        if (NULL === $this->_grantedScope) {
             return FALSE;
         }
         $grantedScope = explode(" ", $this->_grantedScope);
-        if(in_array($scope, $grantedScope)) {
+        if (in_array($scope, $grantedScope)) {
             return TRUE;
         }
+
         return FALSE;
     }
 
-    public function requireScope($scope) {
-        if(FALSE === $this->hasScope($scope)) {
+    public function requireScope($scope)
+    {
+        if (FALSE === $this->hasScope($scope)) {
             $this->_handleException("insufficient_scope", "no permission for this call with granted scope");
         }
     }
 
-    public function hasEntitlement($entitlement) {
-        if(!array_key_exists("entitlement", $this->_resourceOwnerAttributes)) {
+    public function hasEntitlement($entitlement)
+    {
+        if (!array_key_exists("entitlement", $this->_resourceOwnerAttributes)) {
             return FALSE;
         }
+
         return in_array($entitlement, $this->_resourceOwnerAttributes['entitlement']);
     }
 
-    public function requireEntitlement($entitlement) {
-        if($this->_entitlementEnforcement) {
-            if(FALSE === $this->hasEntitlement($entitlement)) {
+    public function requireEntitlement($entitlement)
+    {
+        if ($this->_entitlementEnforcement) {
+            if (FALSE === $this->hasEntitlement($entitlement)) {
                 $this->_handleException("insufficient_entitlement", "no permission for this call with granted entitlement");
             }
         }
     }
 
-    public function getAttributes() {
+    public function getAttributes()
+    {
         return $this->_resourceOwnerAttributes;
     }
 
-    public function getAttribute($key) {
+    public function getAttribute($key)
+    {
         $attributes = $this->getAttributes();
+
         return array_key_exists($key, $attributes) ? $attributes[$key] : NULL;
     }
 
-    private function _getRequiredConfigParameter($key) {
-        if(!array_key_exists($key, $this->_config)) {
+    private function _getRequiredConfigParameter($key)
+    {
+        if (!array_key_exists($key, $this->_config)) {
             $this->_handleException("internal_server_error", "no config parameter '$key'");
         }
+
         return $this->_config[$key];
     }
 
-    private function _handleException($message, $description) {
-       switch($message) {
-            case "no_token":            
+    private function _handleException($message, $description)
+    {
+       switch ($message) {
+            case "no_token":
             case "invalid_token":
                 $responseCode = 401;
                 break;
@@ -161,13 +181,13 @@ class RemoteResourceServer {
         }
         header("HTTP/1.1 " . $responseCode);
 
-        if(500 === $responseCode) {
+        if (500 === $responseCode) {
             echo json_encode(array("error" => $message, "error_description" => $description));
-        } else { 
+        } else {
             if ("no_token" === $message) {
                 // no authorization header is a special case, the client did not know
                 // authentication was required, so tell it now without giving error message
-                $hdr = 'Bearer realm="Resource Server"'; 
+                $hdr = 'Bearer realm="Resource Server"';
             } else {
                 $hdr = sprintf('Bearer realm="Resource Server",error="%s",error_description="%s"', $message, $description);
             }
@@ -179,5 +199,3 @@ class RemoteResourceServer {
     }
 
 }
-
-?>

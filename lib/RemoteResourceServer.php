@@ -1,44 +1,5 @@
 <?php
 
-class ResourceServerException extends Exception {
-
-    private $_description;
-
-    public function __construct($message, $description, $code = 0, Exception $previous = null) {
-        $this->_description = $description;
-        parent::__construct($message, $code, $previous);
-    }
-
-    public function getDescription() {
-        return $this->_description;
-    }
-
-    public function getResponseCode() {
-        switch($this->message) {
-            case "invalid_request":
-                return 400;
-            case "no_token":            
-            case "invalid_token":
-                return 401;
-            case "insufficient_scope":
-            case "insufficient_entitlement":
-                return 403;
-            default:
-                return 400;
-        }
-    }
-
-    public function getLogMessage($includeTrace = FALSE) {
-        $msg = 'Message    : ' . $this->getMessage() . PHP_EOL .
-               'Description: ' . $this->getDescription() . PHP_EOL;
-        if($includeTrace) {
-            $msg .= 'Trace      : ' . PHP_EOL . $this->getTraceAsString() . PHP_EOL;
-        }
-        return $msg;
-    }
-
-}
-
 class RemoteResourceServer {
 
     private $_config;
@@ -59,13 +20,13 @@ class RemoteResourceServer {
 
     public function verifyAuthorizationHeader($authorizationHeader) {
         if(NULL === $authorizationHeader) {
-            throw new ResourceServerException("no_token", "no authorization header in the request");
+            $this->_handleException("no_token", "no authorization header in the request");
         }
         // b64token = 1*( ALPHA / DIGIT / "-" / "." / "_" / "~" / "+" / "/" ) *"="
         $b64TokenRegExp = '(?:[[:alpha:][:digit:]-._~+/]+=*)';
         $result = preg_match('|^Bearer (?P<value>' . $b64TokenRegExp . ')$|', $authorizationHeader, $matches);
         if($result === FALSE || $result === 0) {
-            throw new ResourceServerException("invalid_token", "the access token is malformed");
+            $this->_handleException("invalid_token", "the access token is malformed");
         }
         $accessToken = $matches['value'];
 
@@ -92,16 +53,16 @@ class RemoteResourceServer {
         curl_close($curlChannel);
 
         if(200 !== $httpCode) {
-            throw new ResourceServerException("invalid_token", "the access token is not valid");
+            $this->_handleException("invalid_token", "the access token is not valid");
         }
 
         $token = json_decode($output, TRUE);
         if(NULL === $token) {
-            throw new ResourceServerException("XXX", "unable to decode the token response");
+            $this->_handleException("XXX", "unable to decode the token response");
         }
 
         if(time() > $token['issue_time'] + $token['expires_in']) {
-            throw new ResourceServerException("invalid_token", "the access token expired");
+            $this->_handleException("invalid_token", "the access token expired");
         }
 
         $this->_resourceOwnerId = $token['resource_owner_id'];
@@ -145,7 +106,7 @@ class RemoteResourceServer {
 
     public function requireScope($scope) {
         if(FALSE === $this->hasScope($scope)) {
-            throw new ResourceServerException("insufficient_scope", "no permission for this call with granted scope");
+            $this->_handleException("insufficient_scope", "no permission for this call with granted scope");
         }
     }
 
@@ -159,7 +120,7 @@ class RemoteResourceServer {
     public function requireEntitlement($entitlement) {
         if($this->_entitlementEnforcement) {
             if(FALSE === $this->hasEntitlement($entitlement)) {
-                throw new ResourceServerException("insufficient_entitlement", "no permission for this call with granted entitlement");
+                $this->_handleException("insufficient_entitlement", "no permission for this call with granted entitlement");
             }
         }
     }
@@ -168,11 +129,53 @@ class RemoteResourceServer {
         return $this->_resourceOwnerAttributes;
     }
 
+    public function getAttribute($key) {
+        $attributes = $this->getAttributes();
+        return array_key_exists($key, $attributes) ? $attributes[$key] : NULL;
+    }
+
     private function _getRequiredConfigParameter($key) {
         if(!array_key_exists($key, $this->_config)) {
-            throw new OAuthTwoPdoCodeClientException("no config parameter '$key'");
+            $this->_handleException("internal_server_error", "no config parameter '$key'");
         }
         return $this->_config[$key];
+    }
+
+    private function _handleException($message, $description) {
+       switch($message) {
+            case "no_token":            
+            case "invalid_token":
+                $responseCode = 401;
+                break;
+            case "insufficient_scope":
+            case "insufficient_entitlement":
+                $responseCode = 403;
+                break;
+            case "internal_server_error":
+                $responseCode = 500;
+                break;
+            case "invalid_request":
+            default:
+                $responseCode = 400;
+                break;
+        }
+        header("HTTP/1.1 " . $responseCode);
+
+        if(500 === $responseCode) {
+            echo json_encode(array("error" => $message, "error_description" => $description));
+        } else { 
+            if ("no_token" === $message) {
+                // no authorization header is a special case, the client did not know
+                // authentication was required, so tell it now without giving error message
+                $hdr = 'Bearer realm="Resource Server"'; 
+            } else {
+                $hdr = sprintf('Bearer realm="Resource Server",error="%s",error_description="%s"', $message, $description);
+            }
+            header("WWW-Authenticate: $hdr");
+            echo json_encode(array("error" => $message, "error_description" => $description));
+        }
+        // stop executing everything, we are done here
+        die();
     }
 
 }

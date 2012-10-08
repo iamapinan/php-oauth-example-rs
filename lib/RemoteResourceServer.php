@@ -17,6 +17,16 @@ class RemoteResourceServer
         $this->_resourceOwnerId = NULL;
         $this->_grantedScope = NULL;
         $this->_resourceOwnerAttributes = NULL;
+        $this->_verified = FALSE;
+    }
+
+    public function verifyRequest() 
+    {
+        $apacheHeaders = apache_request_headers();
+        $headerKeys = array_keys($apacheHeaders);
+        $keyPositionInArray = array_search(strtolower("Authorization"), array_map('strtolower', $headerKeys));
+        $authorizationHeader = (FALSE !== $keyPositionInArray) ? $apacheHeaders[$headerKeys[$keyPositionInArray]] : NULL;
+        $this->verifyAuthorizationHeader($authorizationHeader);
     }
 
     public function verifyAuthorizationHeader($authorizationHeader)
@@ -70,6 +80,8 @@ class RemoteResourceServer
         $this->_resourceOwnerId = $token['resource_owner_id'];
         $this->_grantedScope = $token['scope'];
         $this->_resourceOwnerAttributes = $token['resource_owner_attributes'];
+
+        $this->_verified = TRUE;
     }
 
     public function setEntitlementEnforcement($enforce = TRUE)
@@ -79,12 +91,17 @@ class RemoteResourceServer
 
     public function getResourceOwnerId()
     {
-        // FIXME: should we die when the resourceOwnerId is NULL?
+        if(!$this->_verified) {
+            $this->_handleException("internal_server_error", "verify method needs to be requested first");
+        }
         return $this->_resourceOwnerId;
     }
 
     public function getScope()
     {
+        if(!$this->_verified) {
+            $this->_handleException("internal_server_error", "verify method needs to be requested first");
+        }
         if (NULL === $this->_grantedScope) {
             return array();
         }
@@ -94,6 +111,9 @@ class RemoteResourceServer
 
     public function getEntitlement()
     {
+        if(!$this->_verified) {
+            $this->_handleException("internal_server_error", "verify method needs to be requested first");
+        }
         if (!array_key_exists("entitlement", $this->_resourceOwnerAttributes)) {
             return array();
         }
@@ -103,6 +123,9 @@ class RemoteResourceServer
 
     public function hasScope($scope)
     {
+        if(!$this->_verified) {
+            $this->_handleException("internal_server_error", "verify method needs to be requested first");
+        }
         if (NULL === $this->_grantedScope) {
             return FALSE;
         }
@@ -116,6 +139,9 @@ class RemoteResourceServer
 
     public function requireScope($scope)
     {
+        if(!$this->_verified) {
+            $this->_handleException("internal_server_error", "verify method needs to be requested first");
+        }
         if (FALSE === $this->hasScope($scope)) {
             $this->_handleException("insufficient_scope", "no permission for this call with granted scope");
         }
@@ -123,6 +149,9 @@ class RemoteResourceServer
 
     public function hasEntitlement($entitlement)
     {
+        if(!$this->_verified) {
+            $this->_handleException("internal_server_error", "verify method needs to be requested first");
+        }
         if (!array_key_exists("entitlement", $this->_resourceOwnerAttributes)) {
             return FALSE;
         }
@@ -132,6 +161,9 @@ class RemoteResourceServer
 
     public function requireEntitlement($entitlement)
     {
+        if(!$this->_verified) {
+            $this->_handleException("internal_server_error", "verify method needs to be requested first");
+        }
         if ($this->_entitlementEnforcement) {
             if (FALSE === $this->hasEntitlement($entitlement)) {
                 $this->_handleException("insufficient_entitlement", "no permission for this call with granted entitlement");
@@ -141,11 +173,17 @@ class RemoteResourceServer
 
     public function getAttributes()
     {
+        if(!$this->_verified) {
+            $this->_handleException("internal_server_error", "verify method needs to be requested first");
+        }
         return $this->_resourceOwnerAttributes;
     }
 
     public function getAttribute($key)
     {
+        if(!$this->_verified) {
+            $this->_handleException("internal_server_error", "verify method needs to be requested first");
+        }
         $attributes = $this->getAttributes();
 
         return array_key_exists($key, $attributes) ? $attributes[$key] : NULL;

@@ -1,5 +1,1 @@
-resourceServerId = "foo"
-resourceServerSecret = "bar"
-
-tokenEndpoint = "http://localhost/php-oauth/token.php"
-
+tokenInfoEndpoint = "http://localhost/php-oauth/tokeninfo.php"

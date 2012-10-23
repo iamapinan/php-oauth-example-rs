@@ -9,9 +9,7 @@ Using the library is straightforward:
     require_once 'lib/RemoteResourceServer.php';
 
     $config = array(
-        "tokenEndpoint" => "http://localhost/oauth/php-oauth/token.php",
-        "resourceServerId" => "foo",
-        "resourceServerSecret" => "bar",
+        "tokenInfoEndpoint" => "http://localhost/php-oauth/tokeninfo.php"
     );
 
     $rs = new RemoteResourceServer($config);
@@ -32,5 +30,3 @@ documentation.
 If the verification fails, the library will handle passing error messages back
 to the client according to the OAuth Bearer specification, the execution of the
 script will halt and not return after calling `verifyRequest()`.
-
-https://tools.ietf.org/html/draft-ietf-oauth-v2-bearer

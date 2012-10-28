@@ -287,7 +287,7 @@ class RemoteResourceServerException extends Exception
         $this->_authenticateHeader = $authenticateHeader;
     }
 
-    public function getAutenticateHeader()
+    public function getAuthenticateHeader()
     {
         return $this->_authenticateHeader;
     }

@@ -1,32 +1,49 @@
 # Introduction
-This is a simple resource server that is protected using OAuth. The
+This is a simple resource server that is protected using OAuth 2.0. The
 `RemoteResourceServer` class takes care of verifying the Bearer token
 received through the HTTP `Authorization` header.
 
-Using the library is straightforward:
+It depends on [php-lib-remote-rs](https://github.com/fkooman/php-lib-remote-rs),
+it can be installed with this command:
 
-    <?php
-    require_once 'lib/RemoteResourceServer.php';
+    $ docs/install_dependencies.sh
 
-    $config = array(
-        "tokenInfoEndpoint" => "http://localhost/php-oauth/tokeninfo.php"
-    );
+Some example calls:
 
-    $rs = new RemoteResourceServer($config);
-    $rs->verifyRequest();
+    $ curl -i http://localhost/oauth/php-oauth-example-rs/index.php 
+    HTTP/1.1 200 OK
+    Date: Sat, 03 Nov 2012 15:41:16 GMT
+    Server: Apache/2.2.22 (Unix) DAV/2 PHP/5.3.15 with Suhosin-Patch mod_ssl/2.2.22 OpenSSL/0.9.8r
+    X-Powered-By: PHP/5.3.15
+    Content-Length: 58
+    Content-Type: text/html
 
-After the `verifyRequest()` some methods are available to retrieve information
-about the resource owner and client.
+    {"authorized":false,"message":"Hello Unauthorized World!"}
 
-* `getResourceOwnerId()` (the unique resource owner identifier)
-* `getAttributes()` (additional attributes associated with the resource owner)
-* `getScope()` (the scope granted to the client accessing this resource)
-* `getEntitlement()` (the entitlement the resource owner has when accessing this 
-  resource)
+This call is "free", i.e.: you don't need to send an `Authorization` header of
+the `Bearer` type. If you request the protected resource without such header
+you'll get an error:
 
-Some additional methods are available for your convenience, see the API 
-documentation.
+    $ curl -i http://localhost/oauth/php-oauth-example-rs/index.php?protected=1
+    HTTP/1.1 401 Authorization Required
+    Date: Sat, 03 Nov 2012 15:42:45 GMT
+    Server: Apache/2.2.22 (Unix) DAV/2 PHP/5.3.15 with Suhosin-Patch mod_ssl/2.2.22 OpenSSL/0.9.8r
+    X-Powered-By: PHP/5.3.15
+    WWW-Authenticate: Bearer realm="My Example RS"
+    Content-Length: 81
+    Content-Type: application/json
 
-If the verification fails, the library will handle passing error messages back
-to the client according to the OAuth Bearer specification, the execution of the
-script will halt and not return after calling `verifyRequest()`.
+    {"error":"no_token","error_description":"no authorization header in the request"}
+
+Now when you specify a valid `Authorization` header all will be fine:
+
+$ curl -H "Authorization: Bearer ABCDEF" -i http://localhost/oauth/php-oauth-example-rs/index.php?protected=1
+HTTP/1.1 200 OK
+Date: Sat, 03 Nov 2012 15:44:13 GMT
+Server: Apache/2.2.22 (Unix) DAV/2 PHP/5.3.15 with Suhosin-Patch mod_ssl/2.2.22 OpenSSL/0.9.8r
+X-Powered-By: PHP/5.3.15
+Content-Length: 212
+Content-Type: text/html
+
+{"authorized":true,"id":"VWXYZ","attributes":{"uid":["admin"],"entitlement":["urn:vnd:oauth2:applications"],"displayName":["Carlos Catalano"]},"resource_owner_scope":["grades"]}
+

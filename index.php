@@ -1,6 +1,8 @@
 <?php
 
-require_once 'lib/RemoteResourceServer.php';
+require_once 'extlib/php-lib-remote-rs/lib/OAuth/RemoteResourceServer.php';
+
+use \OAuth\RemoteResourceServer as RemoteResourceServer;
 
 $config = parse_ini_file("config/rs.ini");
 

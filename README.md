@@ -45,5 +45,5 @@ X-Powered-By: PHP/5.3.15
 Content-Length: 212
 Content-Type: text/html
 
-{"authorized":true,"id":"VWXYZ","attributes":{"uid":["admin"],"eduPersonEntitlement":["urn:vnd:oauth2:applications"],"displayName":["Carlos Catalano"]},"resource_owner_scope":["grades"]}
+{"authorized":true,"id":"VWXYZ","attributes":{"uid":["admin"],"eduPersonEntitlement":["urn:x-oauth:entitlement:applications"],"displayName":["Carlos Catalano"]},"resource_owner_scope":["grades"]}
 

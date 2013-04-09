@@ -37,13 +37,13 @@ you'll get an error:
 
 Now when you specify a valid `Authorization` header all will be fine:
 
-$ curl -H "Authorization: Bearer ABCDEF" -i http://localhost/oauth/php-oauth-example-rs/index.php?protected=1
-HTTP/1.1 200 OK
-Date: Sat, 03 Nov 2012 15:44:13 GMT
-Server: Apache/2.2.22 (Unix) DAV/2 PHP/5.3.15 with Suhosin-Patch mod_ssl/2.2.22 OpenSSL/0.9.8r
-X-Powered-By: PHP/5.3.15
-Content-Length: 212
-Content-Type: text/html
+    $ curl -H "Authorization: Bearer ABCDEF" -i http://localhost/oauth/php-oauth-example-rs/index.php?protected=1
+    HTTP/1.1 200 OK
+    Date: Sat, 03 Nov 2012 15:44:13 GMT
+    Server: Apache/2.2.22 (Unix) DAV/2 PHP/5.3.15 with Suhosin-Patch mod_ssl/2.2.22 OpenSSL/0.9.8r
+    X-Powered-By: PHP/5.3.15
+    Content-Length: 212
+    Content-Type: text/html
 
-{"authorized":true,"id":"VWXYZ","attributes":{"uid":["admin"],"eduPersonEntitlement":["urn:x-oauth:entitlement:applications"],"displayName":["Carlos Catalano"]},"resource_owner_scope":["grades"]}
+    {"authorized":true,"id":"VWXYZ","attributes":{"uid":["admin"],"eduPersonEntitlement":["urn:x-oauth:entitlement:applications"],"displayName":["Carlos Catalano"]},"resource_owner_scope":["grades"]}
 
